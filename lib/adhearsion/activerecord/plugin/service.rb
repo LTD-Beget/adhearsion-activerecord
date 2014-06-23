@@ -9,7 +9,7 @@ module Adhearsion
           def start
             raise "Must supply an adapter argument to the ActiveRecord configuration" if (config.adapter.nil? || config.adapter.empty?)
 
-            params = config.__values.select { |k,v| !v.nil? }
+            params = config.to_hash.select { |k,v| !v.nil? }
 
             require_models(*params.delete(:model_paths))
             establish_connection params
@@ -29,7 +29,11 @@ module Adhearsion
 
           def create_call_hook_for_connection_cleanup
             Adhearsion::Events.punchblock Punchblock::Event::Offer  do
-              ::ActiveRecord::Base.verify_active_connections!
+              if ::ActiveRecord::VERSION::MAJOR >= 4
+                ::ActiveRecord::Base.connection_pool.connections.map(&:verify!)
+              else
+                ::ActiveRecord::Base.verify_active_connections!
+              end
             end
           end
 
